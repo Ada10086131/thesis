@@ -1,0 +1,734 @@
+---
+title: "thesis"
+author: "Qingyang Zhang"
+date: "2024-09-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+
+# ---- Function definition ----
+# Define the phi function, which is used to calculate the root of the branching process
+phi <- function(theta, lambda) {
+  return(theta - exp(-lambda * (1 - theta)))
+}
+
+# Solve the equation phi(lambda(1-theta)) = 0 to get the extinction probability q
+find_q <- function(lambda) {
+  uniroot(function(theta) phi(theta, lambda), c(0, 1))$root
+}
+
+# Simulate the Reed-Frost model
+simulate_reed_frost <- function(N, I, lambda) {
+  S <- N - I  # Initial number of susceptible people
+  T <- I      #Initial total number of infections
+  while (I > 0) {
+    new_infection <- rbinom(1, S, 1 - exp(-lambda * I / N))
+    S <- S - new_infection
+    I <- new_infection
+    T <- T + new_infection
+    if (S == 0 || I == 0) break
+  }
+  return(T)
+}
+
+# Multiple simulations of the Reed-Frost model
+simulate_reed_frost_multiple_times <- function(N, I, lambda, times) {
+  results <- numeric(times)
+  for (i in 1:times) {
+    results[i] <- simulate_reed_frost(N, I, lambda)
+  }
+  return(results)
+}
+
+# Estimating probability distributions
+estimate_P <- function(simulate_results, N) {
+  table_results <- table(simulate_results)
+  P_hat <- table_results / sum(table_results)
+  return(P_hat)
+}
+
+
+```
+
+
+
+```{r }
+# ---- Function definition ----
+
+# Define phi function, usually exp(-x)
+phi <- function(x) {
+  return(exp(-x))
+}
+
+# Calculate the combination number function choose
+comb <- function(n, k) {
+return(choose(n, k))
+}
+
+# Calculate the recursive formula of P_k^(n)
+calculate_Pk <- function(n, lambda, m) {
+# Initialize the P_k array
+P_k <- numeric(n + 1)
+
+# Initial condition: Calculate P_0
+P_k[1] <- phi(lambda) # P_0 corresponds to P_k[1], because the array index of R starts at 1
+
+# Calculate P_k^(n) using the recursive formula
+  for (k in 1:n) {
+    sum_term <- 0
+    for (j in 0:(k-1)) {
+      # 计算递推公式中的求和部分
+      sum_term <- sum_term + comb(n-j, k-j) * P_k[j + 1] / (phi(lambda * (n-k)/n)^(j + m))
+    }
+    
+    # 计算 P_k^(n) 的值
+    P_k[k + 1] <- (comb(n, k) - sum_term) * (phi(lambda * (n-k)/n)^(k + m)) / comb(n-k, 0)
+  }
+  
+  return(P_k)
+}
+
+# Simulate SIR model
+simulate_sir <- function(N, I, lambda, gamma) {
+S <- N - I # Initial number of susceptible people
+R <- 0 # Initial number of recovered people
+T <- I # Initial total number of infected people
+  while (I > 0) {
+    # Calculate new infections and new recoveries
+    new_infection <- rbinom(1, S, 1 - exp(-lambda * I / N))
+    new_recovery <- rbinom(1, I, gamma)
+    
+    # Update Status
+    S <- S - new_infection
+    I <- I + new_infection - new_recovery
+    R <- R + new_recovery
+    T <- T + new_infection
+    
+    # 如果没有易感者或感染者，模拟结束
+    if (S == 0 || I == 0) break
+  }
+  return(T)
+}
+
+# SIR
+simulate_sir_multiple_times <- function(N, I, lambda, gamma, times) {
+  results <- numeric(times)
+  for (i in 1:times) {
+    results[i] <- simulate_sir(N, I, lambda, gamma)
+  }
+  return(results)
+}
+
+# 估计概率分布
+estimate_P <- function(simulate_results, N) {
+  table_results <- table(simulate_results)
+  P_hat <- table_results / sum(table_results)
+  return(P_hat)
+}
+
+
+plot_results <- function(simulate_results) {
+  hist(simulate_results, breaks = seq(0, max(simulate_results), by = 1), main = NULL, 
+       xlab = "Total Infections", ylab = "Frequency", col = "blue", border = "black")
+}
+
+
+simulate_and_analyze <- function(N, I, lambda, gamma, times) {
+
+simulate_results <- simulate_sir_multiple_times(N, I, lambda, gamma, times)
+  
+P_hat <- estimate_P(simulate_results, N)
+
+P_k <- calculate_Pk(N, lambda, I)
+  
+  cat("P_k^(n) values:\n")
+  for (k in 0:N) {
+    cat("P_", k, "=", P_k[k + 1], "\n")
+  }
+
+  plot_results(simulate_results)
+}
+
+# ---- Simulation run ----
+N <- 50 # Total population
+I <- 1 # Initial number of infected people
+lambda <- 2 # Infection rate
+gamma <- 0.5 # Recovery rate
+times <- 100000 # Number of simulations
+
+simulate_and_analyze(N, I, lambda, gamma, times)
+
+```
+```{r}
+phi <- function(x) {
+  return(exp(-x))
+}
+
+
+comb <- function(n, k) {
+  return(choose(n, k))
+}
+
+
+calculate_Pk <- function(n, lambda, m) {
+ 
+  P_k <- numeric(n + 1)
+  
+  P_k[1] <- phi(lambda)  
+  
+  )
+  for (k in 1:n) {
+    sum_term <- 0
+    for (j in 0:(k-1)) {
+   
+      sum_term <- sum_term + comb(n-j, k-j) * P_k[j + 1] / (phi(lambda * (n-k)/n)^(j + m))
+    }
+    
+    # 计算 P_k^(n) 的值
+    P_k[k + 1] <- (comb(n, k) - sum_term) * (phi(lambda * (n-k)/n)^(k + m)) / comb(n-k, 0)
+  }
+  
+  return(P_k)
+}
+
+
+simulate_sir <- function(N, I, lambda, gamma) {
+  S <- N - I  # 
+  R <- 0      # 
+  T <- I      # 
+  while (I > 0) {
+
+    new_infection <- rbinom(1, S, 1 - exp(-lambda * I / N))
+    new_recovery <- rbinom(1, I, gamma)
+
+    S <- S - new_infection
+    I <- I + new_infection - new_recovery
+    R <- R + new_recovery
+    T <- T + new_infection
+
+    if (S == 0 || I == 0) break
+  }
+  return(T)
+}
+
+
+simulate_sir_multiple_times <- function(N, I, lambda, gamma, times) {
+  results <- numeric(times)
+  for (i in 1:times) {
+    results[i] <- simulate_sir(N, I, lambda, gamma)
+  }
+  return(results)
+}
+
+
+estimate_P <- function(simulate_results, N) {
+  table_results <- table(simulate_results)
+  P_hat <- table_results / sum(table_results)
+  return(P_hat)
+}
+
+
+calculate_minor_epidemics <- function(simulate_results, cutoff) {
+  minor_outbreaks <- sum(simulate_results <= cutoff)
+  fraction_minor <- minor_outbreaks / length(simulate_results)
+  return(fraction_minor)
+}
+
+calculate_major_epidemics_mean_size <- function(simulate_results, cutoff) {
+  major_outbreaks <- simulate_results[simulate_results > cutoff]
+  if (length(major_outbreaks) == 0) {
+    return(0)
+  } else {
+    mean_size <- mean(major_outbreaks)
+    return(mean_size)
+  }
+}
+
+
+plot_results <- function(simulate_results) {
+  hist(simulate_results, breaks = seq(0, max(simulate_results), by = 1), main = NULL, 
+       xlab = "Total Infections", ylab = "Frequency", col = "blue", border = "black")
+}
+
+
+simulate_and_analyze <- function(N, I, lambda, gamma, times, cutoff) {
+
+  simulate_results <- simulate_sir_multiple_times(N, I, lambda, gamma, times)
+  
+
+  P_hat <- estimate_P(simulate_results, N)
+  
+
+  fraction_minor <- calculate_minor_epidemics(simulate_results, cutoff)
+  cat("Fraction of minor epidemics: ", fraction_minor, "\n")
+  
+
+  mean_major_size <- calculate_major_epidemics_mean_size(simulate_results, cutoff)
+  cat("Mean size of major epidemics: ", mean_major_size, "\n")
+  
+
+  P_k <- calculate_Pk(N, lambda, I)
+  
+  cat("P_k^(n) values:\n")
+  for (k in 0:N) {
+    cat("P_", k, "=", P_k[k + 1], "\n")
+  }
+  
+
+  plot_results(simulate_results)
+}
+
+-
+N <- 50   
+I <- 1           
+lambda <- 2 
+gamma <- 0.5    
+times <- 100000 
+cutoff <- 10   
+
+simulate_and_analyze(N, I, lambda, gamma, times, cutoff)
+```
+
+
+```{r pressure, echo=FALSE}
+
+phi <- function(x) {
+  exp(-x)
+}
+
+
+beta_k <- function(k, lambda) {
+  if (k == 0) {
+    return(0)
+  } else if (k == 1) {
+    return(1)
+  } else {
+    sum_term <- 0
+    for (j in 0:(k-1)) {
+      sum_term <- sum_term + choose(k-1, j) * beta_k(j, lambda) * phi(j * lambda)^(k-j)
+    }
+    return(k - sum_term)
+  }
+}
+
+
+mu_k <- function(k, lambda_L) {
+  if (k == 0) {
+    return(0)
+  } else {
+    sum_term <- 0
+    for (i in 0:(k-1)) {
+      sum_term <- sum_term + choose(k-1, i) * beta_k(i, lambda_L) * phi((k-1-i) * lambda_L)^(k-1-i)
+    }
+    return(k - sum_term)
+  }
+}
+
+
+mu_nv <- function(n, v, lambda_L, lambda_G, E_T_I, epsilon) {
+  sum_term <- 0
+  for (k in (n-v):n) {
+    sum_term <- sum_term + choose(v, n-k) * epsilon^(n-k) * (1 - epsilon)^(v-n+k) * (k / n) * mu_k(k, lambda_L) * lambda_G * E_T_I
+  }
+  return(sum_term)
+}
+
+
+calculate_Rv <- function(n_max, x_nv, lambda_L, lambda_G, E_T_I, alpha_n, epsilon) {
+  Rv <- 0
+  for (n in 1:n_max) {
+    for (v in 0:n) {
+      mu_nv_value <- mu_nv(n, v, lambda_L, lambda_G, E_T_I, epsilon)
+      Rv <- Rv + alpha_n[n] * x_nv[n, v + 1] * mu_nv_value
+    }
+  }
+  return(Rv)
+}
+
+
+random_individuals_x_nv <- function(c, n_max) {
+  x_nv <- matrix(0, nrow = n_max, ncol = n_max + 1)
+  for (n in 1:n_max) {
+    for (v in 0:n) {
+      x_nv[n, v + 1] <- choose(n, v) * c^v * (1 - c)^(n - v)
+    }
+  }
+  return(x_nv)
+}
+
+
+family_size <- 5  
+alpha_n <- rep(1 / family_size, family_size) 
+lambda_L <- 2.3 
+lambda_G <- 1.5 
+E_T_I <- 1  
+vacc_efficiencies <- c(0.3, 0.5, 0.9)  
+c_values <- seq(0, 1, by = 0.1)  
+
+
+results <- data.frame()
+
+
+for (epsilon in vacc_efficiencies) {
+  Rv_values <- sapply(c_values, function(c) {
+    x_nv <- random_individuals_x_nv(c, family_size)
+    calculate_Rv(family_size, x_nv, lambda_L, lambda_G, E_T_I, alpha_n, epsilon)
+  })
+  results <- rbind(results, data.frame(c = c_values, Rv = Rv_values, Efficiency = paste("ε =", epsilon)))
+}
+
+
+print(results)
+
+
+if (!require(ggplot2)) install.packages("ggplot2")
+library(ggplot2)
+
+ggplot(results, aes(x = c, y = Rv, color = Efficiency)) +
+  geom_line(size = 1) +
+  labs(title = "Effect of Vaccination Coverage and Efficacy on Rv",
+       x = "Vaccination Coverage (c)",
+       y = expression(R[v]),
+       color = "Vaccine Efficacy") +
+  theme_minimal()
+```
+
+```{r}
+
+if (!require(lpSolve)) install.packages("lpSolve")
+library(lpSolve)
+
+
+n_max <- 5  
+alpha_n <- rep(1 / n_max, n_max)  
+lambda_G <- 0.5 
+lambda_L <- 2
+E_T_I <- 1 
+R_v_target <- 1  
+
+# 
+phi <- function(x) {
+  exp(-x)
+}
+
+# beta_k(k, lambda)
+beta_k <- function(k, lambda) {
+  if (k == 0) {
+    return(1)  # 这里修正为1
+  } else {
+    sum_term <- 0
+    for (j in 0:(k-1)) {
+      sum_term <- sum_term + choose(k-1, j) * beta_k(j, lambda) * phi(j * lambda)
+    }
+    return(1 - sum_term)
+  }
+}
+
+#  mu_k(k, lambda_L)
+mu_k <- function(k, lambda_L) {
+  if (k == 0) {
+    return(0)
+  } else {
+    sum_term <- 0
+    for (i in 0:(k-1)) {
+      sum_term <- sum_term + choose(k-1, i) * beta_k(i, lambda_L) * phi((k-1-i) * lambda_L)
+    }
+    return(k - sum_term)
+  }
+}
+
+#  mu_nv(n, v, lambda_L, lambda_G, E_T_I, epsilon)
+mu_nv <- function(n, v, lambda_L, lambda_G, E_T_I, epsilon) {
+  sum_term <- 0
+  for (k in (n-v):n) {
+    sum_term <- sum_term + choose(v, n-k) * epsilon^(n-k) * (1 - epsilon)^(v-n+k) * (k / n) * mu_k(k, lambda_L) * lambda_G * E_T_I
+  }
+  return(sum_term)
+}
+
+
+calculate_Rv <- function(n_max, x_nv, lambda_L, lambda_G, E_T_I, alpha_n, epsilon) {
+  Rv <- 0
+  for (n in 1:n_max) {
+    for (v in 0:n) {
+      mu_nv_value <- mu_nv(n, v, lambda_L, lambda_G, E_T_I, epsilon)
+      Rv <- Rv + alpha_n[n] * x_nv[n, v + 1] * mu_nv_value
+    }
+  }
+  return(Rv)
+}
+
+
+calculate_c <- function(n_max, x_nv, alpha_n) {
+  c <- 0
+  for (n in 1:n_max) {
+    for (v in 0:n) {
+      c <- c + alpha_n[n] * v * x_nv[n, v + 1] / n
+    }
+  }
+  return(c)
+}
+
+
+num_variables <- sum(1:n_max + 1)
+
+f.obj <- rep(0, num_variables)
+counter <- 1
+for (n in 1:n_max) {
+  for (v in 0:n) {
+    f.obj[counter] <- alpha_n[n] * v / n
+    counter <- counter + 1
+  }
+}
+
+# 构建R_v约束
+f.con <- matrix(0, nrow = 1, ncol = num_variables)
+counter <- 1
+for (n in 1:n_max) {
+  for (v in 0:n) {
+    f.con[1, counter] <- alpha_n[n] * mu_nv(n, v, lambda_L, lambda_G, E_T_I, epsilon = 1)
+    counter <- counter + 1
+  }
+}
+
+# 约束条件R_v <= 1
+f.rhs <- c(R_v_target)
+f.dir <- c("<=")
+
+additional_constraints <- matrix(0, nrow = n_max, ncol = num_variables)
+counter <- 1
+for (n in 1:n_max) {
+  for (v in 0:n) {
+    additional_constraints[n, counter] <- 1
+    counter <- counter + 1
+  }
+}
+f.con <- rbind(f.con, additional_constraints)
+f.rhs <- c(f.rhs, rep(1, n_max))
+f.dir <- c(f.dir, rep("=", n_max))
+
+
+lp_solution <- lp("min", f.obj, f.con, f.dir, f.rhs)
+
+optimal_x_nv <- lp_solution$solution
+optimal_x_nv_matrix <- matrix(0, nrow = n_max, ncol = n_max + 1)
+counter <- 1
+for (n in 1:n_max) {
+  for (v in 0:n) {
+    optimal_x_nv_matrix[n, v + 1] <- optimal_x_nv[counter]
+    counter <- counter + 1
+  }
+}
+
+
+print("Optimal x_nv:")
+print(optimal_x_nv_matrix)
+
+optimal_c <- calculate_c(n_max, optimal_x_nv_matrix, alpha_n)
+optimal_Rv <- calculate_Rv(n_max, optimal_x_nv_matrix, lambda_L, lambda_G, E_T_I, alpha_n, epsilon = 1)
+
+print(paste("Optimal vaccination coverage c:", optimal_c))
+print(paste("Corresponding R_v:", optimal_Rv))
+```
+```{r}
+
+C_max <- 1/3
+
+
+f.con[1, ] <- f.con[1, ] / C_max
+
+
+lp_solution <- lp("min", f.obj, f.con, f.dir, f.rhs)
+
+
+optimal_x_nv <- lp_solution$solution
+optimal_x_nv_matrix <- matrix(0, nrow = n_max, ncol = n_max + 1)
+counter <- 1
+for (n in 1:n_max) {
+  for (v in 0:n) {
+    optimal_x_nv_matrix[n, v + 1] <- optimal_x_nv[counter]
+    counter <- counter + 1
+  }
+}
+
+
+print("Optimal x_nv with C_max = 2/3:")
+print(optimal_x_nv_matrix)
+
+
+optimal_c <- calculate_c(n_max, optimal_x_nv_matrix, alpha_n)
+optimal_Rv <- calculate_Rv(n_max, optimal_x_nv_matrix, lambda_L, lambda_G, E_T_I, alpha_n, epsilon = 1)
+
+print(paste("Optimal vaccination coverage c with C_max = 2/3:", optimal_c))
+print(paste("Corresponding R_v with C_max = 2/3:", optimal_Rv))
+```
+
+···{r}
+```{r}
+# phi
+phi <- function(x) {
+  exp(-x)
+}
+
+# beta_k
+beta_k <- function(k, lambda_L) {
+  if (k == 0) {
+    return(0)
+  } else if (k == 1) {
+    return(1)
+  } else {
+    sum_term <- 0
+    for (j in 0:(k-1)) {
+      sum_term <- sum_term + choose(k, j) * beta_k(j, lambda_L) * phi(j * lambda_L)^(k-j)
+    }
+    return(k - sum_term)
+  }
+}
+
+# mu_n
+mu_n <- function(n, lambda_L) {
+  if (lambda_L == 0) {
+    return(0)
+  }
+  sum_term <- 0
+  for (k in 0:(n-1)) {
+    sum_term <- sum_term + choose(n-1, k) * beta_k(k, lambda_L) * phi(k * lambda_L)^(n-k)
+  }
+  return(n - sum_term)
+}
+
+# R_0
+R_star <- function(n, lambda_L, lambda_G, E_T_i) {
+  mu_n_value <- mu_n(n, lambda_L)
+  return(mu_n_value * lambda_G * E_T_i)
+}
+
+# to calculate lambda_G
+calculate_lambda_G <- function(lambda_L_values, n_values, E_T_i) {
+  results <- data.frame()
+  for (n in n_values) {
+    for (lambda_L in lambda_L_values) {
+      if (lambda_L == 0) {
+        lambda_G <- 1
+      } else {
+        lambda_G <- uniroot(function(lambda_G) R_star(n, lambda_L, lambda_G, E_T_i) - 1, c(0.01, 10))$root
+      }
+      results <- rbind(results, data.frame(n = n, lambda_L = lambda_L, lambda_G = lambda_G))
+    }
+  }
+  return(results)
+}
+
+# parameter
+lambda_L_values <- seq(0, 5, by = 0.1)
+n_values <- c(2, 3, 4, 5) 
+E_T_i <- 1  
+
+# result
+results <- calculate_lambda_G(lambda_L_values, n_values, E_T_i)
+
+# plot
+library(ggplot2)
+
+ggplot(results, aes(x = lambda_L, y = lambda_G, color = as.factor(n), group = n)) +
+  geom_line() +
+  labs(x = expression(lambda[L]), y = expression(lambda[G]), color = "Household Size n") +
+  ggtitle("Plot of critical values of (lambda_L, lambda_G) so that R* = 1 for various household sizes n >= 2") +
+  theme_minimal() +
+  geom_segment(aes(x = 0, y = 1, xend = 1, yend = 0), linetype = "solid", color = "black") +  # 修改为从 (0, 1) 到 (1, 0) 的线
+  coord_cartesian(ylim = c(0, 1), xlim = c(0, 5)) +  # 设置纵坐标范围从0到1
+  scale_y_continuous(breaks = seq(0, 1, by = 0.1)) +  # 设置纵坐标刻度
+  scale_x_continuous(breaks = seq(0, 5, by = 0.5)) +  # 设置横坐标刻度
+  scale_color_manual(values = c("red", "blue", "green", "purple", "orange")) +  # 设置颜色
+  theme(
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(margin = margin(t = -10)),
+    axis.text.y = element_text(margin = margin(r = -10)),
+    axis.ticks.length = unit(0, "cm")
+  )  
+```
+
+```{r}
+library(ggplot2)
+
+# 定义 phi 函数
+phi <- function(x) {
+  exp(-x)
+}
+
+# 计算 beta_k 函数
+beta_k <- function(k, lambda_L) {
+  if (k == 0) {
+    return(0)
+  } else if (k == 1) {
+    return(1)
+  } else {
+    sum_term <- 0
+    for (j in 0:(k-1)) {
+      sum_term <- sum_term + choose(k, j) * beta_k(j, lambda_L) * phi(j * lambda_L)^(k-j)
+    }
+    return(k - sum_term)
+  }
+}
+
+# 计算 mu_n 函数
+mu_n <- function(n, lambda_L) {
+  if (lambda_L == 0) {
+    return(0)
+  }
+  sum_term <- 0
+  for (k in 0:(n-1)) {
+    sum_term <- sum_term + choose(n-1, k) * beta_k(k, lambda_L) * phi(k * lambda_L)^(n-k)
+  }
+  mu_n_value <- n - sum_term
+  if (mu_n_value < 0 || is.na(mu_n_value)) {
+    mu_n_value <- 0
+  }
+  return(mu_n_value)
+}
+
+# 计算 lambda_G 使得 R_0 = 1
+calculate_lambda_G <- function(n, lambda_L_values, E_T_i) {
+  lambda_G_values <- numeric(length(lambda_L_values))
+  for (i in seq_along(lambda_L_values)) {
+    lambda_L <- lambda_L_values[i]
+    mu_n_value <- mu_n(n, lambda_L)
+    if (mu_n_value != 0) {
+      lambda_G_values[i] <- 1 / (mu_n_value * E_T_i)
+    } else {
+      lambda_G_values[i] <- NA
+    }
+  }
+  return(lambda_G_values)
+}
+
+# 参数设置
+lambda_L_values <- seq(0.01, 5, by = 0.01)
+n_values <- 2:5         # 不同的家庭规模
+E_T_i <- 1              # 传染期的期望值
+
+# 保存结果
+results <- data.frame()
+
+for (n in n_values) {
+  lambda_G_values <- calculate_lambda_G(n, lambda_L_values, E_T_i)
+  results <- rbind(results, data.frame(n_lambda_L = lambda_L_values * n, lambda_G = lambda_G_values, n = n))
+}
+
+# 绘制图形
+p <- ggplot(results, aes(x = n_lambda_L, y = lambda_G, color = as.factor(n), group = n)) +
+  geom_line() +
+   geom_segment(aes(x = 0, y = 1, xend = 1, yend = 0), linetype = "solid", color = "black") +  # 修改为从 (0, 1) 到 (1, 0) 的线+
+  scale_x_continuous(limits = c(0, 5)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(title = "Households, R_0 = 1",
+       x = expression(n * lambda[L]),
+       y = expression(lambda[G]),
+       color = "n") +
+  theme_minimal()
+
+print(p)
+```
+
